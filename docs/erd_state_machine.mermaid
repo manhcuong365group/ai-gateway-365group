@@ -1,0 +1,88 @@
+erDiagram
+    signers ||--o{ work_items : "dri / approver"
+    signers ||--o{ approvals : signs
+    signers ||--o{ claims : reviews
+    work_items ||--o{ runs : has
+    work_items ||--o{ releases : produces
+    runs ||--o{ releases : "backs"
+    runs ||--o{ gate_results : evaluated_by
+    gates ||--o{ gate_results : defines
+    releases ||--o{ approvals : requires
+
+    signers {
+        uuid signer_id PK
+        text display_name
+        text email UK "domain 365group.com.vn"
+        approval_role_arr roles
+        bool is_active
+    }
+    work_items {
+        text task_id PK "P0-04, MP-03"
+        text phase
+        text task
+        automation_level automation_level "AUTO..FORBIDDEN"
+        uuid dri_id FK
+        uuid approver_id FK "!= dri_id (LUAT 2)"
+        workflow_status workflow_status
+        blocker_code blocker_code
+        text row_hash "idempotent sync"
+    }
+    claims {
+        uuid id PK
+        text claim_id "CRBLK40_UVR"
+        data_lane data_lane "OFFICIAL_TDS != FIELD"
+        text revision_version
+        date effective_date "req khi LOCKED"
+        int product_version "nam: 2023!=2026"
+        claim_status status
+        uuid reviewer_id FK
+    }
+    runs {
+        uuid run_id PK
+        text work_item_id FK
+        bool dry_run "default TRUE (LUAT 4)"
+        text model_id "cam alias latest"
+        text prompt_version
+        text schema_version
+        text content_hash_before "drift guard"
+        text idempotency_key UK "LUAT 3"
+    }
+    releases {
+        uuid release_id PK
+        text work_item_id FK
+        automation_level automation_level
+        text_arr allow_list "chi sua URL trong day"
+        release_status status
+        jsonb snapshot_before "rollback, khong tai sinh AI"
+        text drift_hash
+    }
+    approvals {
+        uuid approval_id PK
+        uuid release_id FK
+        uuid signer_id FK
+        approval_role role
+        approval_decision decision
+        text verified_via "oauth/jwt, khong phai sheet flag"
+    }
+    gates {
+        text rule_id PK "G01..G31"
+        text gate_type
+        text pass_criteria
+        bool is_blocking
+    }
+    gate_results {
+        uuid id PK
+        uuid run_id FK
+        text rule_id FK
+        qa_result result
+        jsonb violations "[{locator,evidence}]"
+    }
+    audit_log {
+        bigint id PK "APPEND-ONLY (LUAT 1)"
+        timestamptz event_time
+        text actor "human/agent/system"
+        text action
+        text entity_type
+        jsonb before
+        jsonb after
+    }
